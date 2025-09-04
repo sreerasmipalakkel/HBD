@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Our Grand Vintage Love — A Cinematic Journey</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Great+Vibes&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --accent:#c7925b;
+      --accent-dark:#8b5a32;
+      --cream:#f6eade;
+      --text:#efe6db;
+      --overlay: rgba(12,10,8,0.55);
+      --max-width:1200px;
+    }
+
+    /* Reset */
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%; overflow:hidden;} /* IMPORTANT: body overflow hidden for scene management */
+    body{
+      background:#0b0a09;
+      color:var(--text);
+      font-family:"Playfair Display", serif;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+    }
+
+    /* Full-screen scenes - now fixed and controlled by JS */
+    .scene {
+      position:fixed; /* Changed to fixed */
+      inset:0; /* Cover entire viewport */
+      width:100%;
+      height:100vh;
+      min-height:520px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+      background-size:cover;
+      background-position:center;
+      background-repeat:no-repeat;
+      overflow:hidden; /* Prevents internal scrolling unless explicitly overridden */
+
+      /* New: for visibility control */
+      opacity:0;
+      pointer-events:none; /* Prevents interaction with inactive scenes */
+      transition:opacity 0.8s ease-in-out; /* Smooth transition between scenes */
+      z-index:1; /* Base z-index for all scenes */
+    }
+
+    /* Active scene is fully visible and interactive */
+    .scene.active{
+      opacity:1;
+      pointer-events:auto;
+      z-index:10; /* Bring active scene to front */
+    }
+
+    /* film grain & vignette */
+    .scene::before{
+      content:"";
+      position:absolute;inset:0;
+      background:
+        radial-gradient(ellipse at center, rgba(0,0,0,0) 10%, rgba(0,0,0,0.6) 70%),
+        url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200"><filter id="n"><feTurbulence baseFrequency="0.9" numOctaves="1" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(%23n)" opacity="0.03" /></svg>');
+      mix-blend-mode:multiply;
+      pointer-events:none;
+    }
+
+    /* card overlay */
+    .card {
+      position:relative;
+      z-index:2;
+      width:clamp(320px,62%,900px);
+      background: linear-gradient(180deg, rgba(8,6,5,0.45), rgba(12,10,8,0.6));
+      border: 1px solid rgba(200,170,120,0.14);
+      padding:36px;
+      border-radius:12px;
+      box-shadow: 0 18px 48px rgba(0,0,0,0.6);
+      backdrop-filter: blur(4px);
+      transform-origin:center;
+      animation: contentIn 850ms cubic-bezier(.2,.9,.2,1);
+    }
+
+    @keyframes contentIn{
+      from{opacity:0; transform:translateY(25px) scale(1.02)}
+      to{opacity:1; transform:translateY(0) scale(1)}
+    }
+
+    h1.title{
+      font-family:"Playfair Display", cursive;
+      font-size: clamp(36px,6vw,80px);
+      color:var(--accent);
+      margin-bottom:10px;
+      letter-spacing:1px;
+      text-shadow:0 6px 22px rgba(0,0,0,0.7);
+    }
+
+    p.lead{
+      font-size: clamp(16px,1.6vw,20px);
+      color:var(--cream);
+      margin-bottom:18px;
+      line-height:1.6;
+      text-shadow:0 4px 18px rgba(0,0,0,0.45);
+    }
+
+    .sub {
+      font-size:14px;
+      color: #e7dccb;
+      opacity:0.95;
+    }
+
+    /* Bottom next button fixed look inside scene */
+    .next-wrap {
+      position: absolute;
+      bottom:30px;
+      left:50%;
+      transform:translateX(-50%);
+      z-index:3;
+      display:flex;
+      gap:12px;
+      align-items:center;
+    }
+
+    .next {
+      background: linear-gradient(180deg,var(--accent),var(--accent-dark));
+      color:#2b1406;
+      padding:12px 28px;
+      border-radius:999px;
+      border:none;
+      font-weight:700;
+      letter-spacing:1px;
+      box-shadow:0 8px 28px rgba(139,90,50,0.25), inset 0 -2px 0 rgba(0,0,0,0.08);
+      cursor:pointer;
+      transition:transform .22s ease, box-shadow .22s ease;
+      font-family:"Playfair Display", serif;
+    }
+    .next:hover{ transform:translateY(-4px) scale(1.02); box-shadow:0 18px 48px rgba(139,90,50,0.2) }
+
+    /* small gold caption under next */
+    .next small { display:block;font-size:12px;color:rgba(255,238,210,0.9); margin-top:6px; opacity:0.9 }
+
+    /* Scenes layout variations */
+    .scene .layout-row { display:flex; gap:36px; align-items:center; justify-content:center; flex-wrap:wrap; }
+    .left-figure{ max-width:420px; border-radius:10px; overflow:hidden; box-shadow:0 10px 40px rgba(0,0,0,0.6) }
+    .left-figure img{ width:100%; height:auto; display:block; filter:grayscale(6%) contrast(1.05) sepia(10%) }
+
+    /* Journey menu */
+    .menu { display:flex; gap:14px; justify-content:center; margin-top:18px; flex-wrap:wrap }
+    .menu a{
+      background: rgba(255,240,210,0.04);
+      color:var(--cream);
+      padding:10px 18px; border-radius:10px;
+      text-decoration:none; font-weight:600;
+      border:1px solid rgba(200,170,120,0.06);
+      transition: all .18s ease;
+    }
+    .menu a:hover{ transform:translateY(-6px); box-shadow:0 16px 36px rgba(0,0,0,0.45) }
+
+    /* Hub inner content panels */
+    .hub-panel {
+        display: none; /* Hidden by default */
+        text-align: left;
+        margin-top: 28px;
+        /* Inherits card styling implicitly, but also allows its own scrolling */
+        max-height: 50vh; /* Make it scrollable if content overflows */
+        overflow-y: auto;
+        -webkit-overflow-scrolling:touch;
+        padding-right: 6px; /* Space for scrollbar */
+    }
+    .hub-panel.active-content {
+        display: block; /* Show active content */
+    }
+
+    /* Memories section: scrollable */
+    #memories-container {
+      overflow-y:auto; /* Internal scrolling remains */
+      -webkit-overflow-scrolling:touch;
+      padding:56px 24px 120px;
+      align-items:flex-start;
+      justify-content:flex-start;
+      display:block; /* Needs to be block to allow overflow */
+      height:100vh;
+      box-sizing:border-box;
+    }
+    /* Specific styling for the card inside #memories to fit height */
+    #memories-container .card {
+        height: auto; /* Allow card to expand with content */
+        max-height: calc(100vh - 120px); /* Max height to fit viewport with padding */
+        overflow-y: auto; /* Internal scrolling for the card content itself */
+    }
+
+
+    /* custom scrollbar only for memories */
+    #memories-container::-webkit-scrollbar{ width:12px }
+    #memories-container::-webkit-scrollbar-track{ background: rgba(6,5,4,0.35); border-radius:8px }
+    #memories-container::-webkit-scrollbar-thumb{ background: linear-gradient(180deg,var(--accent),var(--accent-dark)); border-radius:8px; box-shadow: inset 0 0 2px rgba(0,0,0,0.35) }
+
+    /* Gallery grid */
+    .gallery {
+      display:grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap:18px;
+      margin-top:26px;
+      align-items:start;
+    }
+    .card-photo {
+      background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.06));
+      border-radius:12px; overflow:hidden; position:relative; cursor:pointer;
+      border:1px solid rgba(200,170,120,0.06);
+      transition: transform .22s ease, box-shadow .22s ease;
+    }
+    .card-photo:hover{ transform:translateY(-8px); box-shadow:0 30px 60px rgba(0,0,0,0.55) }
+    .card-photo img{ width:100%; display:block; height:260px; object-fit:cover; filter:sepia(28%) contrast(1.05) saturate(0.95) brightness(0.98) }
+
+    .caption {
+      padding:12px 14px; font-size:14px; color:var(--cream);
+      border-top:1px solid rgba(200,170,120,0.03); background:linear-gradient(180deg, transparent, rgba(0,0,0,0.06));
+    }
+
+    /* Lightbox modal */
+    .lightbox {
+      position:fixed; inset:0; display:none; align-items:center; justify-content:center; z-index:9999;
+      background:linear-gradient(180deg, rgba(1,1,1,0.6), rgba(0,0,0,0.85));
+      backdrop-filter: blur(6px);
+      padding:30px;
+    }
+    .lightbox.show{ display:flex }
+    .lightbox-inner { max-width:1000px; width:100%; border-radius:12px; overflow:hidden; position:relative; box-shadow:0 30px 80px rgba(0,0,0,0.7) }
+    .lightbox img{ width:100%; height:calc(100vh - 200px); object-fit:contain; background:#000; display:block }
+
+    .lb-close, .lb-prev, .lb-next {
+      position:absolute; top:18px; background:rgba(0,0,0,0.45); color:var(--cream); border:none; padding:10px 14px; border-radius:8px; cursor:pointer; font-weight:700;
+      box-shadow:0 6px 18px rgba(0,0,0,0.6);
+    }
+    .lb-close{ right:16px }
+    .lb-prev{ left:10px; top:50%; transform:translateY(-50%) }
+    .lb-next{ right:10px; top:50%; transform:translateY(-50%) }
+
+    .lb-caption { padding:12px 18px; background:linear-gradient(180deg, rgba(0,0,0,0.5), rgba(0,0,0,0.6)); color:var(--cream); font-size:15px }
+
+    /* Custom checkbox styling for the "sub" text */
+    input[type="checkbox"] {
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      border: 1px solid rgba(200,170,120,0.4);
+      border-radius: 4px;
+      background-color: rgba(255,255,255,0.08);
+      vertical-align: middle;
+      cursor: pointer;
+      margin-right: 6px;
+      position: relative;
+      top: -1px;
+    }
+    input[type="checkbox"]:checked {
+      background-color: var(--accent);
+      border-color: var(--accent-dark);
+    }
+    input[type="checkbox"]:checked::after {
+      content: '✔';
+      color: #2b1406;
+      font-size: 12px;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    /* Responsive tweaks */
+    @media (max-width:900px){
+      .left-figure{ display:none }
+      .card{ padding:22px }
+      .next { padding:10px 18px }
+      .card-photo img{ height:200px }
+      .lightbox img{ height:calc(100vh - 160px) }
+    }
+    @media (max-width:480px){
+      h1.title{ font-size:40px }
+      p.lead{ font-size:15px }
+      .card{ padding:18px }
+      .card-photo img{ height:160px }
+      .next-wrap { bottom:18px }
+    }
+  </style>
+</head>
+<body>
+
+  <section id="landing" class="scene active" style="background-image:url('C:/Users/sreer/OneDrive/Desktop/index.html/images/WhatsApp Image 2025-08-18 at 20.01.46_04b0340d.jpg');">
+    <div class="card" role="region" aria-label="Landing">
+      <h1 class="title">Happy birthday my love</h1>
+      <p class="lead">Every moment in your arms feels like the life I was always meant to live.</p>
+      <div class="layout-row" style="margin-top:12px; justify-content:center;">
+        <div style="text-align:center;">
+          <input class="input" id="uid" placeholder="User ID" aria-label="User ID" />
+          <div style="height:8px"></div>
+          <input class="input" id="pwd" placeholder="Password" type="password" aria-label="Password" />
+        </div>
+      </div>
+      <p class="sub" style="margin-top:12px;">
+      <p id="login-message" class="sub" style="color:var(--accent); margin-top: 10px;"></p>
+    </div>
+
+    <div class="next-wrap">
+      <button class="next" data-target="moon">Next →</button>
+      <small style="display:block;color:rgba(255,238,210,0.9);font-size:13px">Begin the first scene</small>
+    </div>
+  </section>
+
+  <section id="moon" class="scene" style="background-image:url('C:/Users/sreer/OneDrive/Desktop/index.html/images/WhatsApp Image 2025-08-18 at 20.01.44_033e1065.jpg');">
+    <div class="card" role="region" aria-label="Quotes">
+      <h1 class="title">This is my little gift & My promise to our future</h1>
+      <p class="lead">“On your birthday, I promise that I will never break your heart. I promise to always stay by your side, no matter what happens .”</p>
+      <p class="sub">I love you more than anything in this universe.</p>
+    </div>
+
+    <div class="next-wrap">
+      <button class="next" data-target="proposal">Next →</button>
+      <small>Turn the page to the proposal scene</small>
+    </div>
+  </section>
+
+  <section id="proposal" class="scene" style="background-image:url('C:/Users/sreer/OneDrive/Desktop/index.html/images/WhatsApp Image 2025-08-26 at 00.25.03_c6e9b2fd.jpg');">
+    <div class="card layout-row" role="region" aria-label="Proposal">
+      <div style="max-width:520px">
+        <h1 class="title">Will you be my future husband?</h1>
+        <p class="lead"> Answer with what your heart feels </p>
+        <p> (Answer only if you feel you can) </p>
+        <div style="margin-top:8px">
+          <label class="sub"><input type="checkbox" name="q1-choice" id="prop-yes"> Yes, a thousand times Yes!</label>
+          <span style="width:18px;display:inline-block"></span>
+          <label class="sub"><input type="checkbox" name="q1-choice" id="prop-no"> Let me think...</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="next-wrap">
+      <button class="next" data-target="happiness">Next →</button>
+      <small>Reveal how the heart answers</small>
+    </div>
+  </section>
+
+  <section id="happiness" class="scene" style="background-image:url('C:/Users/sreer/OneDrive/Desktop/index.html/images/niranjan-_-photographs-gYnmFPSUzSI-unsplash.jpg');">
+    <div class="card" role="region" aria-label="Happiness">
+      <h1 class="title">Are you really happy with me?</h1>
+      <p class="lead">Happiness & Quiet Truths- Let our silence and smiles answer.</p>
+      <div style="margin-top:12px">
+        <label class="sub"><input type="checkbox" name="q2-choice" id="happy-yes"> Yes, completely!</label>
+        <span style="width:18px;display:inline-block"></span>
+        <label class="sub"><input type="checkbox" name="q2-choice" id="happy-no"> Let me think...</label>
+      </div>
+    </div>
+
+    <div class="next-wrap">
+      <button class="next" data-target="desire">Next →</button>
+      <small>Walk toward the next chapter</small>
+    </div>
+  </section>
+
+  <section id="desire" class="scene" style="background-image:url('C:/Users/sreer/OneDrive/Desktop/index.html/images/IMG-20250825-WA0054.jpg');">
+    <div class="card" role="region" aria-label="Desire">
+      <h1 class="title">Do you really want to spend your life with me?</h1>
+      <p class="lead">Tell me the truth</p>
+      <div style="margin-top:12px">
+        <label class="sub"><input type="checkbox" name="q3-choice" id="desire-yes"> Yes, absolutely!</label>
+        <span style="width:18px;display:inline-block"></span>
+        <label class="sub"><input type="checkbox" name="q3-choice" id="desire-no"> Let me think...</label>
+      </div>
+    </div>
+
+    <div class="next-wrap">
+      <button class="next" data-target="confession">Next → A Quiet Whisper</button>
+      <small>Proceed to heartfelt confessions</small>
+    </div>
+  </section>
+
+  <section id="confession" class="scene" style="background-image:url('C:/Users/sreer/OneDrive/Desktop/index.html/images/IMG-20250825-WA0052.jpg');">
+    <div class="card" role="region" aria-label="Confession">
+      <h1 class="title">Tell me honesty</h1>
+      <p class="lead">My Love, tell us... What do you feel about me? Something that rests on your heart, waiting to be shared?</p>
+      <div style="margin-top:20px;">
+        <textarea id="feelingsInput" placeholder="Your thoughts here..." rows="5" style="width:100%; max-width:600px; padding:12px; border-radius:8px; border:1px solid rgba(200,170,120,0.2); background:rgba(0,0,0,0.3); color:var(--cream); font-family:inherit; font-size:16px;"></textarea>
+      </div>
+      <p id="feelings-message" class="sub" style="color:var(--accent); margin-top: 10px;"></p>
+    </div>
+    <div class="next-wrap">
+      <button class="next" data-target="hub">Next → Our Journey</button>
+      <small>Continue to our memories</small>
+    </div>
+
+  </section>
+
+  <section id="hub" class="scene" style="background-image:url('C:/Users/sreer/OneDrive/Desktop/index.html/images/couple-4783736_1280.webp');">
+    <div class="card" role="region" aria-label="Journey">
+      <h1 class="title">Our Journey</h1>
+      <p class="lead">Select a chapter to open: Our Love Story, My Complaint Box, Memories — or simply continue .</p>
+
+      <div class="menu" role="navigation" aria-label="Site menu">
+        <a href="#" class="menu-link" data-panel="story-panel">Our Love Story</a>
+        <a href="#" class="menu-link" data-panel="quotes-panel">My Complaint Box</a>
+        <a href="#" class="menu-link" data-panel="memories-panel">Memories & Photos</a>
+      </div>
+
+      <!-- Dynamic content area for Story, Quotes, Memories -->
+      <div id="hub-content-display-area" class="hub-content-area" style="margin-top:28px; text-align:left;">
+        <!-- Love Story Panel -->
+        <div id="story-panel" class="hub-panel active-content">
+          <h2 class="title" style="text-align:center;">Our Love Story</h2>
+          <p class="lead" style="text-align:left;">"“Our love is nothing less than a miracle. I truly believe God had already written our story long before we met. I feel the only reason I joined sports was just to find you — because deep in my heart, I never chose sports, yet something pulled me there. Even after I stopped in Kollam, I still went to Bangalore for practice, and later even to Uttarakhand without any event. Now I know, it was only so that destiny could bring me closer to you. At first, I didn’t even recognize you. You became friends with Sreya, and through that bond, you invited us to your home. That simple step changed everything, because it was God’s way of leading me to you. Every moment, every turn, had a reason — and that reason was you. Our love was already written in the stars, we were just waiting for the right time to meet each other.” 💕💕.</p>
+          <p class="lead" style="text-align:left;margin-top:10px;">“But now we are one, and no one can ever break our bond. I love you, da, and I miss you every single second. Do you remember our first meeting? That night, when we walked through Fort Kochi and later shared a drink together in the room — everything felt so magical, and time just flew by. Do you remember on your birthday in 2022, when I just sent you a simple birthday wish? I never knew that from that one message, our journey of love and care would begin. Today, we stand here with so much love between us. I know you love me deeply and care for me, and even though I sometimes annoy you with my questions and disturbances, please don’t feel bad — it’s only because I always want to hear what you need to tell. I’m sorry if my words have ever hurt you. I love you endlessly, and I will love you for the rest of my life.” ❤️</p>
+          <p class="lead" style="text-align:left;margin-top:20px;">Love you da 💌</p>
+        </div>
+
+        <!-- Quotes Panel -->
+        <div id="quotes-panel" class="hub-panel">
+          <h2 class="title" style="text-align:center;">My Complaint Box</h2>
+          <div id="hub-quotes-area" style="text-align:left; margin-top:8px;">
+              <!-- Quotes will be rendered here -->
+          </div>
+          <div class="next-wrap" style="position:relative; bottom:0; left:auto; transform:none; display:flex; justify-content:flex-end; width:100%; margin-top:20px;">
+              <button class="next" style="background:var(--accent-dark); color:var(--cream); padding:8px 16px; font-size:14px; box-shadow:none;" onclick="shuffleQuotes('hub-quotes-area')">Shuffle Quotes</button>
+          </div>
+        </div>
+
+        <!-- Memories & Photos Panel -->
+        <div id="memories-panel" class="hub-panel">
+          <h2 class="title" style="text-align:center">Our Memories & Photos</h2>
+          <p class="lead" style="text-align:center">A long scrapbook of moments. Click any photo to open the larger view (lightbox) — use the arrows to navigate. </p>
+          <div class="gallery" id="hub-gallery-area" aria-live="polite" style="margin-top:26px;">
+              <!-- Photos will be rendered here -->
+          </div>
+          <p style="margin-top:20px; text-align:center; color:rgba(240,225,200,0.9)">“Every photo is a story; every story a piece of forever.”</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="next-wrap">
+      <button class="next" data-target="memories-container">Next →</button>
+      <small>Open the next story chapter</small>
+    </div>
+  </section>
+
+  <section id="memories-container" class="scene" style="background-image:url('C:/Users/sreer/OneDrive/Desktop/index.html/images/caption.jpg');">
+    
+      <h1 class="title" style="text-align:center">Our Memories & Photos</h1>
+      <p class="lead" style="text-align:center">A long scrapbook of moments. Click any photo to open the larger view (lightbox) — use the arrows to navigate.</p>
+
+      <div class="gallery" aria-live="polite" id="main-gallery-area">
+        <!-- Photos will be rendered here dynamically -->
+      </div>
+      <p style="margin-top:20px; text-align:center; color:rgba(240,225,200,0.9)">“Every photo is a story; every story a piece of forever.”</p>
+   
+    <div class="next-wrap">
+      <button class="next" data-target="landing">Restart Journey</button>
+      <small>Go back to the beginning</small>
+    </div>
+  </section>
+
+  <div id="lightbox" class="lightbox" role="dialog" aria-modal="true" aria-label="Image viewer">
+    <div class="lightbox-inner" role="document">
+      <button class="lb-prev" aria-label="Previous image">◀</button>
+      <button class="lb-next" aria-label="Next image">▶</button>
+      <button class="lb-close" aria-label="Close viewer">✕</button>
+      <img id="lb-img" src="" alt="">
+      <div class="lb-caption" id="lb-caption"></div>
+    </div>
+  </div>
+
+  <script>
+    const scenes = document.querySelectorAll('.scene');
+    let currentSceneIndex = 0;
+
+    // Function to navigate between scenes
+    function setScene(id) {
+        const targetScene = document.getElementById(id);
+        if (!targetScene) return;
+
+        scenes.forEach(scene => {
+            scene.classList.remove('active');
+        });
+        targetScene.classList.add('active');
+
+        // Update current scene index for lightbox if applicable
+        currentSceneIndex = Array.from(scenes).indexOf(targetScene);
+
+        // Special handling for the hub to load default content
+        if (id === 'hub') {
+            showHubPanel('story-panel'); // Automatically show the love story panel
+        }
+        // Ensure the body's overflow is hidden for all fixed scenes
+        document.body.style.overflow = 'hidden';
+    }
+
+    // Set initial scene
+    document.addEventListener('DOMContentLoaded', () => {
+        // Initial values for login fields (for quick testing)
+        document.getElementById('uid').value = 'mylove';
+        document.getElementById('pwd').value = 'forever';
+        setScene('landing'); // Start at the landing page
+    });
+
+
+    // --- Login Logic ---
+    function validateLogin() {
+        const uid = document.getElementById('uid').value;
+        const pwd = document.getElementById('pwd').value;
+        const loginMessage = document.getElementById('login-message');
+
+        if (uid === CORRECT_USERNAME && pwd === CORRECT_PASSWORD) {
+            loginMessage.textContent = '';
+            setScene('moon');
+        } else {
+            loginMessage.textContent = 'Invalid User ID or Password. Please try again.';
+        }
+    }
+
+    // --- Next button event listener ---
+    document.querySelectorAll('.next').forEach(btn => {
+      btn.addEventListener('click', e => {
+        const targetId = btn.getAttribute('data-target');
+        
+        // Specific validation for confession scene
+        if (targetId === 'hub' && document.getElementById('confession') && document.getElementById('confession').classList.contains('active')) {
+            const feelingsInput = document.getElementById('feelingsInput');
+            const feelingsMessage = document.getElementById('feelings-message');
+            if (feelingsInput.value.trim() === '') {
+                feelingsMessage.textContent = 'Please share your feelings before proceeding.';
+                setTimeout(() => { feelingsMessage.textContent = ''; }, 3000);
+                return; // Stop here if feelings are empty
+            }
+        }
+        setScene(targetId);
+      });
+    });
+
+
+    // --- Checkbox Logic (for single choice) ---
+    function setupSingleChoice(name) {
+        const checkboxes = document.querySelectorAll(`input[name="${name}"]`);
+        checkboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                if (this.checked) {
+                    checkboxes.forEach(otherCheckbox => {
+                        if (otherCheckbox !== this) {
+                            otherCheckbox.checked = false;
+                        }
+                    });
+                }
+            });
+        });
+    }
+
+    // Setup for all question groups
+    setupSingleChoice('q1-choice');
+    setupSingleChoice('q2-choice');
+    setupSingleChoice('q3-choice');
+
+
+    // ===== Quotes Content (EDIT THIS ARRAY FOR YOUR QUOTES) =====
+    const YOUR_QUOTES = [
+        { t: "Promise me that you will never break my heart.", a: "" },
+        { t: "Promise me that whenever we fight, even if you’re angry, at least say good night. Let’s try our best to resolve things before we sleep, because I can’t sleep with a fight — it only brings me to tears..", a: "" },
+        { t: "I love sharing everything about myself with you, but sometimes I feel you’re not always as open with me. All I ask is that you listen to me with your heart when I’m talking, because otherwise I may feel a little sad and slowly stop sharing.",  a: "" },
+        { t: "Sometimes, I feel like you don’t prioritize me, and in those moments it reminds me of what you once said — that I’m the 166,009th person on your wish list.", a: "" },
+        { t: "I don’t have any problem with you drinking, but once you get the bottle, it feels like you completely forget about me. I don’t like that, and that’s why I end up fighting with you whenever you drink..", a: ""},
+        { t: "Yes, I am possessive. I know you would never cheat on me, but I don’t like it when other girls get too close to you. Whenever I create a problem, there’s always a reason behind it. But when I share it with you, you often take their side — and that makes me hate them the most..", a: "" },
+        { t: "I know life gets busy, and I never want to stop you from living your moments. But for me, a single word from you is enough to calm my heart. When you’re lost in work or laughter with friends and I don’t hear from you, my heart begins to ache, and I keep waiting. If you could just whisper to me before, even a simple word I would sit peacefully, holding onto your words instead of my worries.", a: "" },
+        // Add your personal quotes here! Example:
+        // { t: "The way you smile makes my world brighter.", a: "— Your Name" },
+        // { t: "My heart found its home the day I found you.", a: "— Your Name" },
+    ];
+
+    function renderQuotes(targetId) {
+        const el = document.getElementById(targetId);
+        if (!el) return;
+        el.innerHTML = '';
+        const quotesToDisplay = YOUR_QUOTES.slice(0, Math.min(YOUR_QUOTES.length, 7)); // Display first 3 or fewer
+        quotesToDisplay.forEach(q => {
+            const p = document.createElement('p');
+            p.className = 'lead';
+            p.style.textAlign = 'left';
+            p.innerHTML = `“${q.t}” <small style="display:block; font-size:0.8em; opacity:0.8; margin-top:4px;">${q.a}</small>`;
+            el.appendChild(p);
+        });
+    }
+
+    function shuffleQuotes(targetId) {
+        YOUR_QUOTES.sort(() => Math.random() - 0.5);
+        renderQuotes(targetId);
+    }
+
+    // ===== Photo Gallery Content (EDIT THIS ARRAY FOR YOUR PHOTOS) =====
+    const YOUR_PHOTOS = [
+        { src: "C:/Users/sreer/OneDrive/Desktop/index.html/images/IMG-20250825-WA0048.jpg", cap: "Our first Valentine’s Day together", alt: "Valentinesday" },
+        { src: "C:/Users/sreer/OneDrive/Desktop/index.html/images/IMG-20250825-WA0054.jpg", cap: "Sunset at bhopal", alt: "Sunset" },
+        { src: "C:/Users/sreer/OneDrive/Desktop/index.html/images/IMG-20250825-WA0053.jpg", cap: "Bhopal memories", alt: "Favourate one" },
+        { src: "C:/Users/sreer/OneDrive/Desktop/index.html/images/IMG-20250825-WA0049.jpg", cap: "Delhi ", alt: "India gate" },
+        { src: "C:/Users/sreer/OneDrive/Desktop/index.html/images/IMG-20250825-WA0047.jpg", cap: "Payyanur series", alt: "Vishu" },
+        { src: "C:/Users/sreer/OneDrive/Desktop/index.html/images/IMG-20250825-WA0046.jpg", cap: "First meetuo", alt: "Kochi" },
+        { src: "C:/Users/sreer/OneDrive/Desktop/index.html/images/IMG-20250825-WA0045.jpg", cap: "I cherish every moment with you", alt: "Marine drive" },
+        { src: "C:/Users/sreer/OneDrive/Desktop/index.html/images/IMG-20250825-WA0044.jpg", cap: "Cute couples", alt: "My fav pic" },
+        { src: "C:/Users/sreer/OneDrive/Desktop/index.html/images/IMG-20250825-WA0043.jpg", cap: "Guruvayur", alt: "Dream fullfilling" },
+        // Add your personal photos here! Example:
+        // { src: "https://your-image-url.com/your-photo.jpg", cap: "A caption for our special day.", alt: "Description" },
+    ];
+
+    function renderGallery(targetId, photosData = YOUR_PHOTOS) {
+        const g = document.getElementById(targetId);
+        if (!g) return;
+        g.innerHTML = '';
+        photosData.forEach((p, i) => {
+            const div = document.createElement('div');
+            div.className = 'card-photo';
+            div.setAttribute('data-src', p.src);
+            div.setAttribute('data-caption', p.cap);
+            div.setAttribute('tabindex', '0'); // For accessibility
+            div.innerHTML = `
+                <img loading="lazy" src="${p.src}" alt="${p.alt}">
+                <div class="caption">${p.cap}</div>
+            `;
+            div.addEventListener('click', () => openLightbox(i, photosData));
+            div.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') openLightbox(i, photosData); });
+            g.appendChild(div);
+        });
+    }
+
+    // --- Hub inner navigation - NEW dynamic content loading ---
+    function showHubPanel(panelId) {
+        const panels = document.querySelectorAll('#hub .hub-panel');
+        panels.forEach(panel => {
+            panel.classList.remove('active-content');
+            panel.scrollTop = 0; // Reset scroll position when hiding
+        });
+
+        const targetPanel = document.getElementById(panelId);
+        if (targetPanel) {
+            targetPanel.classList.add('active-content');
+
+            // Render content specific to the activated panel
+            if (panelId === 'quotes-panel') {
+                renderQuotes('hub-quotes-area');
+            } else if (panelId === 'memories-panel') {
+                renderGallery('hub-gallery-area', YOUR_PHOTOS);
+            }
+        }
+    }
+
+    // --- Menu link event listeners for Hub ---
+    document.querySelectorAll('.menu-link').forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const panelId = this.getAttribute('data-panel');
+            if (panelId) {
+                showHubPanel(panelId);
+            } else {
+                // For direct scene links (like #story, #quotes-list, #gallery in the dinner scene)
+                const targetSceneId = this.getAttribute('href').substring(1); // Remove '#'
+                setScene(targetSceneId);
+            }
+        });
+    });
+
+
+    // --- Lightbox interactions (now integrated with YOUR_PHOTOS) ---
+    const lightbox = document.getElementById('lightbox');
+    const lbImg = document.getElementById('lb-img');
+    const lbCaption = document.getElementById('lb-caption');
+    const btnClose = document.querySelector('.lb-close');
+    const btnPrev = document.querySelector('.lb-prev');
+    const btnNext = document.querySelector('.lb-next');
+    let lightboxPhotosData = []; // This will hold the array of photos for the *current* gallery being viewed
+    let currentLightboxIndex = -1;
+
+    function openLightbox(index, photosData = YOUR_PHOTOS) { // Default to YOUR_PHOTOS if not specified
+        lightboxPhotosData = photosData;
+        const item = lightboxPhotosData[index];
+        if (!item) return;
+        currentLightboxIndex = index;
+        lbImg.src = item.src;
+        lbImg.alt = item.alt;
+        lbCaption.textContent = item.cap;
+        lightbox.classList.add('show');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeLightbox() {
+        lightbox.classList.remove('show');
+        lbImg.src = '';
+        lbImg.alt = '';
+        lbCaption.textContent = '';
+        document.body.style.overflow = ''; // Restore body overflow
+        currentLightboxIndex = -1;
+    }
+
+    function prevImage() {
+        if (currentLightboxIndex <= 0) currentLightboxIndex = lightboxPhotosData.length - 1;
+        else currentLightboxIndex--;
+        openLightbox(currentLightboxIndex, lightboxPhotosData);
+    }
+    function nextImage() {
+        if (currentLightboxIndex >= lightboxPhotosData.length - 1) currentLightboxIndex = 0;
+        else currentLightboxIndex++;
+        openLightbox(currentLightboxIndex, lightboxPhotosData);
+    }
+
+    btnClose.addEventListener('click', closeLightbox);
+    btnPrev.addEventListener('click', prevImage);
+    btnNext.addEventListener('click', nextImage);
+
+    // keyboard navigation for lightbox
+    document.addEventListener('keydown', (e) => {
+      if (lightbox.classList.contains('show')) {
+        if (e.key === 'ArrowLeft') {
+          e.preventDefault(); // Prevent page scroll
+          prevImage();
+        }
+        if (e.key === 'ArrowRight') {
+          e.preventDefault(); // Prevent page scroll
+          nextImage();
+        }
+        if (e.key === 'Escape') {
+          closeLightbox();
+        }
+      }
+    });
+
+    // close when clicked outside inner box
+    lightbox.addEventListener('click', (e) => {
+      if (e.target === lightbox) closeLightbox();
+    });
+
+    // --- Init ---
+    document.addEventListener('DOMContentLoaded', () => {
+        // Initial rendering for the main quotes and gallery areas
+        renderQuotes('quotes-display-area'); // Renders quotes for the 'moon' scene if you had that
+        renderGallery('main-gallery-area', YOUR_PHOTOS); // Renders the main gallery for 'memories-container' scene
+        
+        // This ensures the first view is 'landing'
+        setScene('landing');
+    });
+  </script>
+</body>
+</html>
